@@ -18,7 +18,7 @@ void Domain::tick(double dt) {
             Particle& object = particles[j];
 
             Vector diff = subject.pos - object.pos;
-            double strength = 1 - diff.len() / config.influenceDistance;
+            double strength = 1 - (diff.len() - config.influenceDistanceThreshold) / config.influenceDistance;
             strength = fmin(1, fmax(0, strength));
             strength = pow(strength, config.influencePower);
             Vector force = diff.normalize() * strength * config.forceFactor;
@@ -47,26 +47,36 @@ void Domain::tick(double dt) {
         // if(p.pos.y < -w) { p.pos.y += 2*w; }
         // if(p.pos.y >  w) { p.pos.y -= 2*w; }
 
-        if(p.pos.x < 0) { p.dead = true; }
-        if(p.pos.x >  w) { p.dead = true; }
-        // if(p.pos.y < -w) { p.dead = true; }
-        // if(p.pos.y >  w) { p.dead = true; }
+        // Bounce
+        if(config.bounce) {
+            if(p.pos.x < 0) { p.pos.x =     - p.pos.x; p.vel.x *= -1; }
+            if(p.pos.x > w) { p.pos.x = 2*w - p.pos.x; p.vel.x *= -1; }
+            if(p.pos.y < 0) { p.pos.y =     - p.pos.y; p.vel.y *= -1; }
+            if(p.pos.y > h) { p.pos.y = 2*h - p.pos.y; p.vel.y *= -1; }
+        } else {
+            // Kill
+            if(p.pos.x < 0) { p.dead = true; }
+            if(p.pos.x >  w) { p.dead = true; }
+            // if(p.pos.y < -w) { p.dead = true; }
+            // if(p.pos.y >  w) { p.dead = true; }
 
-        // if(p.pos.x < -w) { p.pos.x = -2*w - p.pos.x; p.vel.x *= -0.2; }
-        // if(p.pos.x >  w) { p.pos.x =  2*w - p.pos.x; p.vel.x *= -0.2; }
-        if(p.pos.y < 0) { p.pos.y = -2*h - p.pos.y; p.vel.y *= -0.2; }
-        if(p.pos.y >  h) { p.pos.y =  2*h - p.pos.y; p.vel.y *= -0.2; }
+            // Bounce y
+            if(p.pos.y < 0) { p.pos.y =     - p.pos.y; p.vel.y *= -1; }
+            if(p.pos.y > h) { p.pos.y = 2*h - p.pos.y; p.vel.y *= -1; }
+        }
 
-        // if(p.pos.x < -w) { p.pos.x = -w; p.vel.x = 0; }
-        // if(p.pos.x >  w) { p.pos.x =  w; p.vel.x = 0; }
-        // if(p.pos.y < -w) { p.pos.y = -w; p.vel.y = 0; }
-        // if(p.pos.y >  w) { p.pos.y =  w; p.vel.y = 0; }
+        // if(p.pos.x < -w) { p.pos.x = -w; p.vel.x *= 0; }
+        // if(p.pos.x >  w) { p.pos.x =  w; p.vel.x *= 0; }
+        // if(p.pos.y < -w) { p.pos.y = -w; p.vel.y *= 0; }
+        // if(p.pos.y >  w) { p.pos.y =  w; p.vel.y *= 0; }
 
         // Circle in center
         Vector circlePos(w * 0.5, h * 0.5);
         Vector diff = p.pos - circlePos;
+        Vector norm = diff.normalize();
         if(diff.len() < 1) {
-            p.pos = circlePos + diff.normalize();
+            p.pos = circlePos + norm * (2 - diff.len());
+            // p.vel = norm * 2 * (p.vel.dot(norm)) - p.vel; // reflect ?? TODO
         }
     }
 

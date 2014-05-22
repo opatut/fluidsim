@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <omp.h>
+#include <mpi.h>
 #include <list>
 #include <cmath>
 #include <unistd.h>
@@ -16,7 +17,11 @@ double drand() {
     return ((double)rand()/(double)RAND_MAX);
 }
 
-int main() {
+int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &config.rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &config.clients);
+
     srand((unsigned)time(NULL));
 
     // SFML
@@ -31,6 +36,11 @@ int main() {
     // Initialize
     Simulation simulation;
 
+    // for(int i = 0; i < 10000; ++i) {
+    //         Particle p(Vector(config.domainSize * config.width * drand(), config.domainSize * config.height * drand()), Vector(0, 0));
+    //         simulation.insert(p);
+    //     }
+
     // Status
     std::string status;
     double particlesToSpawn = 0;
@@ -38,6 +48,7 @@ int main() {
         // Timing
         float odt = clock.restart().asSeconds();
         float dt = fmin(1.0/100, odt);
+        dt *= config.simulationSpeed;
         status = "";
 
         // Spawning
@@ -55,6 +66,12 @@ int main() {
             } else if(event.type == sf::Event::KeyPressed) {
                 if(event.key.code == sf::Keyboard::Period) {
                     config.drawParticles = !config.drawParticles;
+                } else if(event.key.code == sf::Keyboard::Comma) {
+                    config.drawDomains = !config.drawDomains;
+                } else if(event.key.code == sf::Keyboard::Add) {
+                    config.simulationSpeed += 0.1;
+                } else if(event.key.code == sf::Keyboard::Subtract) {
+                    config.simulationSpeed -= 0.1;
                 } else if(event.key.code == sf::Keyboard::Escape) {
                     window.close();
                 }
@@ -65,6 +82,28 @@ int main() {
 
         window.clear(sf::Color::Black);
 
+        double scale = 80;
+        Vector offset(100, 100);
+
+        // draw domains
+        if(config.drawDomains) {
+            sf::VertexArray domainLines(sf::Lines, (config.width + config.height + 2) * 2);
+            sf::Color domainLineColor(255, 255, 255, 20);
+            for(unsigned int x = 0; x <= config.width; x++) {
+                const Vector& start = Vector(x * config.domainSize, 0) * scale + offset;
+                const Vector& end = Vector(x * config.domainSize, config.height * config.domainSize) * scale + offset;
+                domainLines.append(sf::Vertex(sf::Vector2f(start.x, start.y), domainLineColor));
+                domainLines.append(sf::Vertex(sf::Vector2f(end.x, end.y), domainLineColor));
+            }
+            for(unsigned int y = 0; y <= config.height; y++) {
+                const Vector& start = Vector(0, y * config.domainSize) * scale + offset;
+                const Vector& end = Vector(config.width * config.domainSize, y * config.domainSize) * scale + offset;
+                domainLines.append(sf::Vertex(sf::Vector2f(start.x, start.y), domainLineColor));
+                domainLines.append(sf::Vertex(sf::Vector2f(end.x, end.y), domainLineColor));
+            }
+            window.draw(domainLines);
+        }
+
         unsigned int i = 0;
         if(config.drawParticles) {
             sf::VertexArray vertices(sf::Quads, simulation.domainCount * config.domainBufferSize * 4);
@@ -72,7 +111,7 @@ int main() {
                 Domain* d = simulation.domains[domainIndex];
                 for(unsigned int particleIndex = 0; particleIndex < d->particles.count; ++particleIndex) {
                     const Particle& p = d->particles[particleIndex];
-                    const Vector& pos = p.pos * 80.0 + Vector(100, 100);
+                    const Vector& pos = p.pos * scale + offset;
                     const float s = config.particleSize;
 
                     // const sf::Color color(255 * p.pressure, 255 - 255 * p.pressure, 0);
@@ -95,7 +134,7 @@ int main() {
                 Domain* d = simulation.domains[domainIndex];
                 for(unsigned int particleIndex = 0; particleIndex < d->particles.count; ++particleIndex) {
                     const Particle& p = d->particles[particleIndex];
-                    const Vector& pos = p.pos * 80.0 + Vector(100, 100);
+                    const Vector& pos = p.pos * scale + offset;
                     vertices[i] = sf::Vertex(sf::Vector2f(pos.x, pos.y), sf::Color::White);
                     i++;
                 }
@@ -113,4 +152,6 @@ int main() {
 
         window.display();
     }
+
+    MPI_Finalize();
 }

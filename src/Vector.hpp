@@ -6,9 +6,12 @@ struct Vector {
     Vector(double _x, double _y);
     Vector(const Vector& o);
 
+    double dot(const Vector& o) const;
     Vector operator* (double fac) const;
     Vector operator+ (const Vector& o) const;
     void operator+= (const Vector& o);
+    void operator*= (double o);
+    void operator*= (const Vector& o);
     Vector operator- () const;
     Vector operator- (Vector o) const;
     double len2() const;

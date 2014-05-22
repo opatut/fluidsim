@@ -12,6 +12,8 @@ struct Simulation {
     void sync();
     bool insert(const Particle& p, Domain* previousDomain = 0);
 
+    static int getDomainId(int x, int y);
+
     // Members
     Domain** domains;
     unsigned int domainCount;

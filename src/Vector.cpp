@@ -17,6 +17,10 @@ Vector::Vector(const Vector& o)
     , y(o.y) 
 {}
 
+double Vector::dot(const Vector& o) const {
+    return o.x * x + o.y * y;
+}
+
 Vector Vector::operator* (double fac) const {
     return Vector(x * fac, y * fac);
 }
@@ -27,6 +31,14 @@ Vector Vector::operator+ (const Vector& o) const {
 
 void Vector::operator+= (const Vector& o) {
     x += o.x; y += o.y;
+}
+
+void Vector::operator*= (double o) {
+    x *= o; y *= o;
+}
+
+void Vector::operator*= (const Vector& o) {
+    x *= o.x; y *= o.y;
 }
 
 Vector Vector::operator- () const {
